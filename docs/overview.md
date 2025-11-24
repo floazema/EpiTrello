@@ -107,4 +107,5 @@ This documentation is organized into two main categories:
 - **API Reference** - API endpoints
 - **Frontend Pages** - Pages and components
 - **Docker Configuration** - Container setup
+- **CI/CD Setup** - GitHub Actions workflows
 

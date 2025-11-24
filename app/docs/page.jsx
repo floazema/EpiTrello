@@ -159,6 +159,16 @@ export default async function DocsPage({ searchParams }) {
                 >
                   Docker Configuration
                 </Link>
+                <Link
+                  href="/docs?doc=dev-cicd"
+                  className={`block py-2 px-3 text-sm rounded-md transition-colors ${
+                    selectedDoc === 'dev-cicd'
+                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  CI/CD Setup
+                </Link>
               </div>
             </div>
           </nav>
@@ -233,7 +243,8 @@ function getTitle(fileName) {
     'database': 'Database Schema',
     'api': 'API Reference',
     'frontend': 'Frontend Pages',
-    'docker': 'Docker Configuration'
+    'docker': 'Docker Configuration',
+    'cicd': 'CI/CD Setup'
   };
   return titles[fileName] || fileName;
 }
