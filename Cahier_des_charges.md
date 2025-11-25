@@ -1,4 +1,4 @@
-# Taskly — Cahier des charges (Global)
+# EpiTrello — Cahier des charges (Global)
 
 ## 1. Vision & objectifs
 - Application de gestion de projet en mode Kanban, pensée pour la simplicité et la collaboration.
