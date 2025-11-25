@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Taskly - Authentification",
+  title: "EpiTrello - Kanban Board",
   description: "Système d'authentification avec PostgreSQL",
 };
 

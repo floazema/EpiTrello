@@ -86,7 +86,7 @@ Create a `.env.local` file in the root directory (optional, defaults are provide
 ```env
 # Database
 PGHOST=localhost
-PGDATABASE=taskly_db
+PGDATABASE=epitrello_db
 PGUSER=postgres
 PGPASSWORD=postgres
 PGPORT=5432
@@ -107,7 +107,7 @@ The project uses two services defined in `docker-compose.yml`:
 ### PostgreSQL Service
 - **Image**: postgres:16-alpine
 - **Port**: 5432
-- **Database**: taskly_db
+- **Database**: epitrello_db
 - **Credentials**: postgres/postgres
 - **Volume**: Persistent data storage
 
