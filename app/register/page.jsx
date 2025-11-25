@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, ArrowLeft, LayoutDashboard } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -74,19 +74,33 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 p-4">
-      <Card className="w-full max-w-md bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 relative overflow-hidden">
+      {/* Simple Background Decorative Elements */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-full blur-[120px] opacity-40"></div>
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-to-tl from-zinc-800 to-zinc-900 rounded-full blur-[120px] opacity-40"></div>
+      </div>
+      {/* Back to Home Link */}
+      <Link 
+        href="/" 
+        className="absolute top-6 left-6 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to home
+      </Link>
+
+      <Card className="w-full max-w-md bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="bg-zinc-900 dark:bg-zinc-50 p-3 rounded-full">
-              <UserPlus className="h-6 w-6 text-zinc-50 dark:text-zinc-900" />
+            <div className="bg-zinc-900 dark:bg-zinc-100 p-4 rounded-2xl">
+              <UserPlus className="h-7 w-7 text-white dark:text-zinc-900" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">
-            Create Account
+          <CardTitle className="text-3xl font-bold text-center text-zinc-900 dark:text-zinc-100">
+            Get Started
           </CardTitle>
-          <CardDescription className="text-center">
-            Sign up to start using Taskly
+          <CardDescription className="text-center text-base">
+            Create your account and start organizing
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -150,7 +164,11 @@ export default function RegisterPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-all" 
+              disabled={loading}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -160,21 +178,15 @@ export default function RegisterPage() {
                 "Create Account"
               )}
             </Button>
-            <div className="text-sm text-center text-zinc-500 dark:text-zinc-400">
+            <div className="text-sm text-center text-zinc-600 dark:text-zinc-400">
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="text-zinc-900 dark:text-zinc-50 font-medium hover:underline"
+                className="text-zinc-900 dark:text-zinc-100 font-semibold hover:underline"
               >
                 Sign in
               </Link>
             </div>
-            <Link
-              href="/"
-              className="text-sm text-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:underline"
-            >
-              Back to home
-            </Link>
           </CardFooter>
         </form>
       </Card>
