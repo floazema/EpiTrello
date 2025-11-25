@@ -23,19 +23,7 @@ EpiTrello uses GitHub Actions for automated testing, building, and deployment. T
 
 **Purpose:** Ensures code quality and catches issues early.
 
-### 2. Deploy (Production)
-
-**File:** `.github/workflows/deploy.yml`
-**Triggers:** Push to `main` branch
-
-**Steps:**
-1. Builds the application
-2. Deploys to Vercel production
-3. Creates deployment summary
-
-**Purpose:** Automatically deploy to production after merging to main.
-
-### 3. Docker Publish
+### 2. Docker Publish
 
 **File:** `.github/workflows/docker-publish.yml`
 **Triggers:** Push to `main`, version tags
@@ -47,7 +35,7 @@ EpiTrello uses GitHub Actions for automated testing, building, and deployment. T
 
 **Purpose:** Publish Docker images for easy deployment.
 
-### 4. Security Scan
+### 3. Security Scan
 
 **File:** `.github/workflows/security-scan.yml`
 **Triggers:** Push, PR, weekly schedule
@@ -60,63 +48,18 @@ EpiTrello uses GitHub Actions for automated testing, building, and deployment. T
 
 **Purpose:** Identify security vulnerabilities.
 
-### 5. Preview Deployment
-
-**File:** `.github/workflows/preview.yml`
-**Triggers:** Pull requests
-
-**Steps:**
-1. Builds the application
-2. Deploys preview to Vercel
-3. Comments preview URL on PR
-
-**Purpose:** Test changes before merging.
-
 ## Setup Instructions
 
-### Step 1: Install Vercel CLI
+### Optional: Add Production Secrets
 
-```bash
-npm i -g vercel
-```
-
-### Step 2: Login to Vercel
-
-```bash
-vercel login
-```
-
-### Step 3: Link Your Project
-
-```bash
-vercel link
-```
-
-This creates `.vercel/project.json` with your project details.
-
-### Step 4: Get Vercel Token
-
-```bash
-vercel token
-```
-
-Copy the generated token.
-
-### Step 5: Add GitHub Secrets
-
-Go to your GitHub repository:
+If you plan to deploy to production, go to your GitHub repository:
 1. Click **Settings** → **Secrets and variables** → **Actions**
 2. Click **New repository secret**
 
-Add these secrets:
-
-**Vercel Credentials:**
-- `VERCEL_TOKEN` - Token from step 4
-- `VERCEL_ORG_ID` - From `.vercel/project.json`
-- `VERCEL_PROJECT_ID` - From `.vercel/project.json`
+Add these secrets for production deployment:
 
 **Database (Production):**
-- `PGHOST` - Your production database host (e.g., Neon, Supabase)
+- `PGHOST` - Your production database host (e.g., Neon, Supabase, Railway)
 - `PGDATABASE` - Database name
 - `PGUSER` - Database username
 - `PGPASSWORD` - Database password
@@ -124,13 +67,10 @@ Add these secrets:
 **Application:**
 - `JWT_SECRET` - Random secret key for JWT signing
 
-### Step 6: Generate JWT Secret
-
+**Generate JWT Secret:**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
-
-Copy and add as `JWT_SECRET` secret.
 
 ## Using Docker Images
 
@@ -173,14 +113,6 @@ Add to your `README.md`:
 **Problem:** Database connection fails
 **Solution:** Check PostgreSQL service is running in CI workflow
 
-### Deploy Fails
-
-**Problem:** "Invalid Vercel token"
-**Solution:** Regenerate token with `vercel token` and update secret
-
-**Problem:** "Build failed"
-**Solution:** Check Vercel logs in the Actions tab for detailed error
-
 ### Docker Build Fails
 
 **Problem:** "No space left on device"
@@ -193,17 +125,12 @@ Add to your `README.md`:
 
 ### Development
 - Uses `.env.local`
-- Connects to local PostgreSQL
-
-### Preview (PR)
-- Uses preview database
-- Temporary deployment URL
-- Auto-deleted after merge
+- Connects to local PostgreSQL via Docker
 
 ### Production
-- Uses production database (Neon/Supabase)
-- Permanent deployment URL
-- Requires all secrets configured
+- Uses production database (Neon/Supabase/Railway)
+- Deploy with Docker or your preferred platform
+- Requires production secrets configured
 
 ## Security Best Practices
 
@@ -225,15 +152,41 @@ Review and merge Dependabot PRs regularly.
 
 ## Manual Deployment
 
-If you need to deploy manually:
+### Using Docker
 
 ```bash
-# Deploy to production
-vercel --prod
+# Build the image
+docker build -t epitrello:latest .
 
-# Deploy preview
-vercel
+# Run locally
+docker run -p 3000:3000 --env-file .env epitrello:latest
+
+# Push to registry (GitHub Container Registry)
+docker tag epitrello:latest ghcr.io/yourusername/epitrello:latest
+docker push ghcr.io/yourusername/epitrello:latest
 ```
+
+### Deploy to Railway
+
+```bash
+# Install Railway CLI
+npm i -g @railway/cli
+
+# Login and link project
+railway login
+railway link
+
+# Deploy
+railway up
+```
+
+### Deploy to Render
+
+1. Connect your GitHub repository
+2. Select "Web Service"
+3. Use Docker environment
+4. Add environment variables
+5. Deploy
 
 ## Advanced: Custom Workflows
 
@@ -274,8 +227,8 @@ jobs:
 
 After deployment, find URLs in:
 - Workflow summary
-- PR comments (for preview)
-- Vercel dashboard
+- Your hosting platform dashboard (Railway, Render, etc.)
+- Docker container logs
 
 ## Cost Considerations
 
@@ -283,21 +236,21 @@ After deployment, find URLs in:
 - Free for public repositories
 - 2000 minutes/month for private repos (free tier)
 
-**Vercel:**
-- Free tier includes:
-  - Unlimited deployments
-  - Automatic HTTPS
-  - 100GB bandwidth/month
-
 **Container Registry:**
 - Free for public images
 - 500MB storage for private images (free tier)
 
+**Deployment Platforms:**
+- Railway: Free tier with 500 hours/month
+- Render: Free tier available with limitations
+- Fly.io: Free allowances for small apps
+- Self-hosted: Use your own VPS/server
+
 ## Next Steps
 
-1. Set up GitHub Secrets
-2. Push to main to trigger first deployment
-3. Create a PR to test preview deployment
-4. Monitor workflows in Actions tab
-5. Configure Dependabot alerts
+1. Push to main to trigger CI workflow
+2. Monitor workflows in Actions tab
+3. Configure Dependabot alerts
+4. Choose deployment platform (Railway, Render, Docker, etc.)
+5. Deploy using Docker images from GitHub Container Registry
 

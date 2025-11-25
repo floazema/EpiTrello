@@ -42,7 +42,7 @@
 - Base de données: PostgreSQL (modèle relationnel pour utilisateurs, boards, colonnes, tâches, membres, invitations).
 - Authentification & sécurité: JWT, hashing des mots de passe (bcrypt), cookies sécurisés.
 - Conteneurisation: Docker pour la base de données.
-- Hosting : Vercel pour le frontend et le backend. Neon pour la base de données.
+- Hosting : Docker containers, Railway, Render, or self-hosted. Neon, Supabase, or Railway pour la base de données.
 
 ## 7. Architecture applicative (haute niveau)
 - Architecture modulaire: séparation des pages, composants UI réutilisables et utilitaires.

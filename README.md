@@ -65,21 +65,10 @@ npm run lint
 This project includes GitHub Actions workflows for:
 
 - **CI** - Automated testing and building on every push/PR
-- **Deploy** - Automatic deployment to Vercel on main branch
 - **Docker** - Build and push Docker images to GitHub Container Registry  
 - **Security** - Dependency and container vulnerability scanning
-- **Preview** - Deploy preview environments for pull requests
 
 See [`.github/workflows/README.md`](.github/workflows/README.md) for detailed documentation.
-
-### Required Secrets
-
-Configure these in GitHub Settings → Secrets:
-- `VERCEL_TOKEN` - Vercel deployment token
-- `VERCEL_ORG_ID` - Vercel organization ID
-- `VERCEL_PROJECT_ID` - Vercel project ID
-- `JWT_SECRET` - JWT secret for production
-- Database credentials: `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`
 
 ## 📝 License
 
