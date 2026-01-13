@@ -1,32 +1,29 @@
 {
-  "name": "epitrello-app",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "name": "epitrello",
+  "version": "1.0.0",
+  "description": "EpiTrello - A Kanban project management tool",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "init-db": "node scripts/init-db.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "init-db": "node --require dotenv/config scripts/init-db.js"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "clsx": "^2.1.1",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.546.0",
-    "next": "15.5.6",
-    "pg": "^8.16.3",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-markdown": "^10.1.0",
-    "rehype-raw": "^7.0.0",
-    "remark-breaks": "^4.0.0",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.3.1"
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "pg": "^8.11.0",
+    "jsonwebtoken": "^9.1.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.4.31",
+    "lucide-react": "^0.263.1",
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^15.0.0"
   }
 }

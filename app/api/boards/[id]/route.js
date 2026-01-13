@@ -1,169 +1,130 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { query } from '@/lib/db';
+// app/api/boards/[id]/route.js
+import { db } from '@/lib/db';
+import { verifyAuth } from '@/lib/auth';
 
-// GET - Get a specific board
 export async function GET(request, { params }) {
   try {
-    const { id } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Non authentifié' },
-        { status: 401 }
-      );
+    const { id } = params;
+    
+    const user = await verifyAuth(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: 'Token invalide' },
-        { status: 401 }
-      );
-    }
-
-    const boardResult = await query(
-      'SELECT id, name, description, color, created_at FROM boards WHERE id = $1 AND owner_id = $2',
-      [id, decoded.userId]
+    // Verify user has access to board
+    const memberCheck = await db.query(
+      'SELECT * FROM board_members WHERE board_id = $1 AND user_id = $2',
+      [id, user.id]
     );
 
-    if (boardResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Board non trouvé' },
-        { status: 404 }
-      );
+    if (memberCheck.rows.length === 0) {
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const board = boardResult.rows[0];
-
-    // Get columns for this board
-    const columnsResult = await query(
-      'SELECT id, name, position FROM columns WHERE board_id = $1 ORDER BY position',
+    // Get board
+    const board = await db.query(
+      'SELECT * FROM boards WHERE id = $1',
       [id]
     );
 
-    return NextResponse.json(
-      {
-        success: true,
-        board: {
-          ...board,
-          columns: columnsResult.rows,
-        },
-      },
-      { status: 200 }
-    );
+    if (board.rows.length === 0) {
+      return Response.json({ error: 'Board not found' }, { status: 404 });
+    }
+
+    return Response.json(board.rows[0]);
   } catch (error) {
     console.error('Error fetching board:', error);
-    return NextResponse.json(
-      { success: false, message: 'Erreur serveur' },
+    return Response.json(
+      { error: 'Failed to fetch board' },
       { status: 500 }
     );
   }
 }
 
-// DELETE - Delete a board
-export async function DELETE(request, { params }) {
+export async function PUT(request, { params }) {
   try {
-    const { id } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const { id } = params;
+    const { name, description } = await request.json();
 
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Non authentifié' },
-        { status: 401 }
-      );
+    const user = await verifyAuth(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: 'Token invalide' },
-        { status: 401 }
-      );
+    // Verify user is owner of board
+    const member = await db.query(
+      'SELECT * FROM board_members WHERE board_id = $1 AND user_id = $2',
+      [id, user.id]
+    );
+
+    if (member.rows.length === 0 || member.rows[0].role !== 'owner') {
+      return Response.json({ error: 'Only board owner can update board' }, { status: 403 });
     }
 
-    const result = await query(
-      'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id',
-      [id, decoded.userId]
+    // Update board
+    const result = await db.query(
+      'UPDATE boards SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+      [name, description || '', id]
     );
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Board non trouvé' },
-        { status: 404 }
-      );
+      return Response.json({ error: 'Board not found' }, { status: 404 });
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Board supprimé avec succès',
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error deleting board:', error);
-    return NextResponse.json(
-      { success: false, message: 'Erreur serveur' },
-      { status: 500 }
-    );
-  }
-}
-
-// PATCH - Update a board
-export async function PATCH(request, { params }) {
-  try {
-    const { id } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: 'Token invalide' },
-        { status: 401 }
-      );
-    }
-
-    const { name, description, color } = await request.json();
-
-    const result = await query(
-      'UPDATE boards SET name = COALESCE($1, name), description = COALESCE($2, description), color = COALESCE($3, color), updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND owner_id = $5 RETURNING id, name, description, color, updated_at',
-      [name, description, color, id, decoded.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Board non trouvé' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Board mis à jour avec succès',
-        board: result.rows[0],
-      },
-      { status: 200 }
-    );
+    return Response.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating board:', error);
-    return NextResponse.json(
-      { success: false, message: 'Erreur serveur' },
+    return Response.json(
+      { error: 'Failed to update board' },
       { status: 500 }
     );
   }
 }
 
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = params;
+
+    const user = await verifyAuth(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify user is owner of board
+    const member = await db.query(
+      'SELECT * FROM board_members WHERE board_id = $1 AND user_id = $2',
+      [id, user.id]
+    );
+
+    if (member.rows.length === 0 || member.rows[0].role !== 'owner') {
+      return Response.json({ error: 'Only board owner can delete board' }, { status: 403 });
+    }
+
+    // Delete all tasks in board
+    const columns = await db.query(
+      'SELECT id FROM columns WHERE board_id = $1',
+      [id]
+    );
+
+    for (const col of columns.rows) {
+      await db.query('DELETE FROM tasks WHERE column_id = $1', [col.id]);
+    }
+
+    // Delete all columns
+    await db.query('DELETE FROM columns WHERE board_id = $1', [id]);
+
+    // Delete all members
+    await db.query('DELETE FROM board_members WHERE board_id = $1', [id]);
+
+    // Delete board
+    await db.query('DELETE FROM boards WHERE id = $1', [id]);
+
+    return Response.json({ message: 'Board deleted' });
+  } catch (error) {
+    console.error('Error deleting board:', error);
+    return Response.json(
+      { error: 'Failed to delete board' },
+      { status: 500 }
+    );
+  }
+}
