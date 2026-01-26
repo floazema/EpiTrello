@@ -31,10 +31,10 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
       return { text: date.toLocaleDateString(), isOverdue: true, isNear: false };
     } else {
       const daysUntil = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
-      return { 
-        text: date.toLocaleDateString(), 
-        isOverdue: false, 
-        isNear: daysUntil <= 3 
+      return {
+        text: date.toLocaleDateString(),
+        isOverdue: false,
+        isNear: daysUntil <= 3
       };
     }
   };
@@ -45,15 +45,19 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
     <Card
       className="p-3 bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing group border-l-4"
       style={{
-        borderLeftColor: card.priority === 'urgent' ? '#dc2626' : 
-                         card.priority === 'high' ? '#ea580c' :
-                         card.priority === 'medium' ? '#ca8a04' : '#16a34a'
+        borderLeftColor: card.priority === 'urgent' ? '#dc2626' :
+          card.priority === 'high' ? '#ea580c' :
+            card.priority === 'medium' ? '#ca8a04' : '#16a34a'
       }}
       draggable
       onDragStart={(e) => {
+        e.stopPropagation();
         e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("cardId", card.id.toString());
-        e.dataTransfer.setData("sourceColumnId", card.column_id.toString());
+        e.dataTransfer.setData("text/plain", JSON.stringify({
+          type: "card",
+          cardId: card.id,
+          sourceColumnId: card.column_id
+        }));
       }}
     >
       <div className="flex items-start gap-2">
@@ -96,13 +100,12 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
 
             {/* Due Date */}
             {dueDate && (
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded ${
-                dueDate.isOverdue 
-                  ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' 
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded ${dueDate.isOverdue
+                  ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
                   : dueDate.isNear
-                  ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20'
-                  : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800'
-              }`}>
+                    ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                    : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800'
+                }`}>
                 <Calendar className="h-2.5 w-2.5" />
                 {dueDate.text}
               </span>
