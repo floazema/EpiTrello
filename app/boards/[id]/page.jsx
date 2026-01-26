@@ -264,17 +264,17 @@ export default function BoardPage() {
     }
   };
 
-  const handleColumnDragStart = (columnId) => {
+  const handleColumnDragStart = (e, columnId) => {
     setDraggedColumnId(columnId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", JSON.stringify({ type: "column", columnId }));
   };
 
   const handleColumnDragOver = (e, index) => {
     e.preventDefault();
     e.stopPropagation();
-    const type = e.dataTransfer.types.includes("text/plain") ? 
-      e.dataTransfer.getData("type") : null;
-    
-    if (type === "column") {
+    // Use state to check if we're dragging a column (getData doesn't work in dragover)
+    if (draggedColumnId !== null) {
       setDropTargetIndex(index);
     }
   };
@@ -283,15 +283,13 @@ export default function BoardPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    const type = e.dataTransfer.getData("type");
-    if (type !== "column") return;
+    // Use state instead of getData which can be unreliable
+    if (draggedColumnId === null) return;
 
-    const columnId = parseInt(e.dataTransfer.getData("columnId"));
-    
-    if (!columnId || targetIndex === undefined) return;
+    const columnId = draggedColumnId;
 
     const sourceIndex = board.columns.findIndex((col) => col.id === columnId);
-    
+
     if (sourceIndex === targetIndex) {
       setDraggedColumnId(null);
       setDropTargetIndex(null);
@@ -421,21 +419,20 @@ export default function BoardPage() {
                 key={column.id}
                 onDragOver={(e) => handleColumnDragOver(e, index)}
                 onDrop={(e) => handleColumnDrop(e, index)}
-                className={`${
-                  dropTargetIndex === index && draggedColumnId !== column.id
-                    ? "relative"
-                    : ""
-                }`}
+                className={`${dropTargetIndex === index && draggedColumnId !== column.id
+                  ? "relative"
+                  : ""
+                  }`}
               >
                 {dropTargetIndex === index && draggedColumnId !== column.id && (
                   <div className="absolute -left-2 top-0 bottom-0 w-1 bg-blue-500 rounded-full z-10" />
                 )}
                 <div
-                  onDragStart={() => handleColumnDragStart(column.id)}
+                  draggable
+                  onDragStart={(e) => handleColumnDragStart(e, column.id)}
                   onDragEnd={handleColumnDragEnd}
-                  className={`${
-                    draggedColumnId === column.id ? "opacity-50" : ""
-                  }`}
+                  className={`${draggedColumnId === column.id ? "opacity-50" : ""
+                    }`}
                 >
                   <KanbanColumn
                     column={column}
@@ -451,7 +448,7 @@ export default function BoardPage() {
             ))}
 
             {/* Add Column */}
-            <div 
+            <div
               className="w-80 flex-shrink-0"
               onDragOver={(e) => handleColumnDragOver(e, board?.columns.length || 0)}
               onDrop={(e) => handleColumnDrop(e, board?.columns.length || 0)}

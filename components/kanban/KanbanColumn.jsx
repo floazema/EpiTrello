@@ -64,33 +64,34 @@ export default function KanbanColumn({
     e.stopPropagation();
     setIsDragOver(false);
 
-    const type = e.dataTransfer.getData("type");
+    try {
+      const rawData = e.dataTransfer.getData("text/plain");
+      if (!rawData) return;
 
-    if (type === "column") {
-      // Dropping a column - ignore in column component
-      return;
-    }
+      const data = JSON.parse(rawData);
 
-    // Dropping a card
-    const cardId = parseInt(e.dataTransfer.getData("cardId"));
-    const sourceColumnId = parseInt(e.dataTransfer.getData("sourceColumnId"));
+      if (data.type === "column") {
+        // Dropping a column - ignore in column component, handled by parent
+        return;
+      }
 
-    if (cardId && sourceColumnId !== column.id) {
-      await onCardDrop(cardId, column.id);
+      if (data.type === "card") {
+        // Dropping a card
+        const { cardId, sourceColumnId } = data;
+        if (cardId && sourceColumnId !== column.id) {
+          await onCardDrop(cardId, column.id);
+        }
+      }
+    } catch (err) {
+      // Invalid JSON or other error, ignore
+      console.error("Drop error:", err);
     }
   };
 
   return (
     <div
-      className={`flex flex-col w-80 flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 ${
-        isDragOver ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
-      }`}
-      draggable={!isEditingColumn}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("columnId", column.id.toString());
-        e.dataTransfer.setData("type", "column");
-      }}
+      className={`flex flex-col w-80 flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 ${isDragOver ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
+        }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -106,7 +107,7 @@ export default function KanbanColumn({
               className="w-full px-2 py-1 text-sm font-semibold border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               onBlur={() => {
                 if (editedColumnName.trim()) {
-                  handleUpdateColumn({ preventDefault: () => {} });
+                  handleUpdateColumn({ preventDefault: () => { } });
                 } else {
                   setEditedColumnName(column.name);
                   setIsEditingColumn(false);
