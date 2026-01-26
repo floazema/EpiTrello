@@ -23,7 +23,7 @@ postgres:
   image: postgres:16-alpine
   container_name: epitrello-postgres
   environment:
-    POSTGRES_DB: taskly_db
+    POSTGRES_DB: epitrello_db
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
   ports:
@@ -41,7 +41,7 @@ postgres:
 
 **Configuration:**
 - **Image:** postgres:16-alpine (lightweight Alpine Linux base)
-- **Database:** taskly_db
+- **Database:** epitrello_db
 - **Credentials:** postgres/postgres
 - **Port:** 5432 (accessible on host)
 - **Volume:** postgres_data (persistent storage)
@@ -57,7 +57,7 @@ app:
   container_name: epitrello-app
   environment:
     - DB_HOST=postgres
-    - DB_NAME=taskly_db
+    - DB_NAME=epitrello_db
     - DB_USER=postgres
     - DB_PASSWORD=postgres
     - DB_PORT=5432
@@ -241,7 +241,7 @@ docker compose exec postgres sh
 docker compose exec app npm install new-package
 
 # Access PostgreSQL CLI
-docker compose exec postgres psql -U postgres taskly_db
+docker compose exec postgres psql -U postgres epitrello_db
 ```
 
 ## Development Workflow

@@ -45,12 +45,27 @@ export async function GET(request, { params }) {
       [id]
     );
 
+    // Get cards for all columns in this board
+    const cardsResult = await query(
+      `SELECT c.* FROM cards c
+       JOIN columns col ON c.column_id = col.id
+       WHERE col.board_id = $1
+       ORDER BY c.position`,
+      [id]
+    );
+
+    // Organize cards by column
+    const columns = columnsResult.rows.map(column => ({
+      ...column,
+      cards: cardsResult.rows.filter(card => card.column_id === column.id)
+    }));
+
     return NextResponse.json(
       {
         success: true,
         board: {
           ...board,
-          columns: columnsResult.rows,
+          columns,
         },
       },
       { status: 200 }

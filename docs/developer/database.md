@@ -12,7 +12,7 @@ Database connection is managed in `lib/db.js` using the `pg` library with connec
 {
   host: process.env.PGHOST || 'localhost',
   port: 5432,
-  database: process.env.PGDATABASE || 'taskly_db',
+  database: process.env.PGDATABASE || 'epitrello_db',
   user: process.env.PGUSER || 'postgres',
   password: process.env.PGPASSWORD || 'postgres',
   max: 20,                        // Maximum connections in pool
@@ -164,12 +164,12 @@ CREATE TABLE tasks (
 
 ### Backup
 ```bash
-docker compose exec postgres pg_dump -U postgres taskly_db > backup.sql
+docker compose exec postgres pg_dump -U postgres epitrello_db > backup.sql
 ```
 
 ### Restore
 ```bash
-docker compose exec -T postgres psql -U postgres taskly_db < backup.sql
+docker compose exec -T postgres psql -U postgres epitrello_db < backup.sql
 ```
 
 ### Reset Database
