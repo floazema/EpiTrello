@@ -26,6 +26,10 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -46,7 +50,73 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
       });
     }
     setError("");
+    setComments([]);
+    setNewComment("");
+
+    // Load comments if editing an existing card
+    if (card?.id && isOpen) {
+      loadComments(card.id);
+    }
   }, [card, isOpen]);
+
+  const loadComments = async (cardId) => {
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`/api/cards/${cardId}/comments`);
+      const data = await res.json();
+      if (data.success) {
+        setComments(data.comments);
+      }
+    } catch (err) {
+      console.error('Error loading comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !card?.id) return;
+
+    setAddingComment(true);
+    try {
+      const res = await fetch(`/api/cards/${card.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment.trim() }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setComments([...comments, data.comment]);
+        setNewComment("");
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to add comment');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!confirm('Delete this comment?')) return;
+
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setComments(comments.filter(c => c.id !== commentId));
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to delete comment');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -194,6 +264,81 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
             Separate tags with commas
           </p>
         </div>
+
+        {/* Comments Section - Only show for existing cards */}
+        {card?.id && (
+          <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <Label className="text-base font-semibold">
+              Comments ({comments.length})
+            </Label>
+
+            {/* Comments List */}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {loadingComments ? (
+                <div className="text-center py-4 text-zinc-500">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                </div>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-zinc-500 text-center py-4">
+                  No comments yet. Be the first to comment!
+                </p>
+              ) : (
+                comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="bg-zinc-50 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          {comment.user_name}
+                        </span>
+                        <span className="text-zinc-500">•</span>
+                        <span className="text-zinc-500 text-xs">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Comment */}
+            <div className="flex gap-2">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                rows={2}
+                disabled={addingComment}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleAddComment}
+                disabled={addingComment || !newComment.trim()}
+                size="sm"
+                className="self-end"
+              >
+                {addingComment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Post"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">

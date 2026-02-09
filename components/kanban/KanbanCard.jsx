@@ -1,7 +1,5 @@
-"use client";
-
 import { Card } from "@/components/ui/card";
-import { Trash2, Edit2, GripVertical, Calendar, AlertCircle, Tag } from "lucide-react";
+import { Trash2, Edit2, GripVertical, Calendar, AlertCircle, Tag, MessageSquare } from "lucide-react";
 
 const PRIORITY_COLORS = {
   low: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
@@ -40,10 +38,11 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
   };
 
   const dueDate = formatDate(card.due_date);
+  const commentCount = parseInt(card.comment_count) || 0;
 
   return (
     <Card
-      className="p-3 bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing group border-l-4"
+      className="p-3 bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow cursor-pointer group border-l-4"
       style={{
         borderLeftColor: card.priority === 'urgent' ? '#dc2626' :
           card.priority === 'high' ? '#ea580c' :
@@ -58,6 +57,12 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
           cardId: card.id,
           sourceColumnId: card.column_id
         }));
+      }}
+      onClick={(e) => {
+        // Only open edit if not clicking on delete button
+        if (!e.target.closest('[data-delete-button]')) {
+          onEdit(card);
+        }
       }}
     >
       <div className="flex items-start gap-2">
@@ -90,7 +95,7 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
             </div>
           )}
 
-          {/* Footer with Priority and Due Date */}
+          {/* Footer with Priority, Due Date, and Comments */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Priority Badge */}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${PRIORITY_COLORS[card.priority] || PRIORITY_COLORS.medium}`}>
@@ -101,31 +106,30 @@ export default function KanbanCard({ card, onEdit, onDelete }) {
             {/* Due Date */}
             {dueDate && (
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded ${dueDate.isOverdue
-                  ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
-                  : dueDate.isNear
-                    ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20'
-                    : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800'
+                ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+                : dueDate.isNear
+                  ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                  : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800'
                 }`}>
                 <Calendar className="h-2.5 w-2.5" />
                 {dueDate.text}
               </span>
             )}
+
+            {/* Comments Badge */}
+            {commentCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                <MessageSquare className="h-2.5 w-2.5" />
+                {commentCount}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions - Only Delete Button */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(card);
-            }}
-            className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
-            title="Edit card"
-          >
-            <Edit2 className="h-3 w-3 text-zinc-600 dark:text-zinc-400" />
-          </button>
-          <button
+            data-delete-button
             onClick={(e) => {
               e.stopPropagation();
               if (confirm("Delete this card?")) {

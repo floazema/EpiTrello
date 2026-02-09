@@ -269,12 +269,14 @@ export default function BoardPage() {
   };
 
   const handleColumnDragStart = (e, columnId) => {
+    console.log('Drag start:', columnId);
     setDraggedColumnId(columnId);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", JSON.stringify({ type: "column", columnId }));
   };
 
   const handleColumnDragOver = (e, index) => {
+    console.log('Column drag over index:', index);
     e.preventDefault();
     e.stopPropagation();
     // Use state to check if we're dragging a column (getData doesn't work in dragover)
@@ -284,6 +286,7 @@ export default function BoardPage() {
   };
 
   const handleColumnDrop = async (e, targetIndex) => {
+    console.log('Column drop at index:', targetIndex, 'draggedColumnId:', draggedColumnId);
     e.preventDefault();
     e.stopPropagation();
 
@@ -456,23 +459,18 @@ export default function BoardPage() {
                 {dropTargetIndex === index && draggedColumnId !== column.id && (
                   <div className="absolute -left-2 top-0 bottom-0 w-1 bg-blue-500 rounded-full z-10" />
                 )}
-                <div
-                  draggable
+                <KanbanColumn
+                  column={column}
+                  onAddCard={handleAddCard}
+                  onUpdateCard={handleUpdateCard}
+                  onDeleteCard={handleDeleteCard}
+                  onUpdateColumn={handleUpdateColumn}
+                  onDeleteColumn={handleDeleteColumn}
+                  onCardDrop={handleCardDrop}
                   onDragStart={(e) => handleColumnDragStart(e, column.id)}
                   onDragEnd={handleColumnDragEnd}
-                  className={`${draggedColumnId === column.id ? "opacity-50" : ""
-                    }`}
-                >
-                  <KanbanColumn
-                    column={column}
-                    onAddCard={handleAddCard}
-                    onUpdateCard={handleUpdateCard}
-                    onDeleteCard={handleDeleteCard}
-                    onUpdateColumn={handleUpdateColumn}
-                    onDeleteColumn={handleDeleteColumn}
-                    onCardDrop={handleCardDrop}
-                  />
-                </div>
+                  isDragging={draggedColumnId === column.id}
+                />
               </div>
             ))}
 

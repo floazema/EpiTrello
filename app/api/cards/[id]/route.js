@@ -27,18 +27,19 @@ export async function PATCH(request, { params }) {
 
     const { title, description, priority, due_date, tags, color } = await request.json();
 
-    // Verify user owns the board containing this card
+    // Verify user has access to the board containing this card
     const cardCheck = await query(
       `SELECT ca.id FROM cards ca
        JOIN columns c ON ca.column_id = c.id
        JOIN boards b ON c.board_id = b.id
-       WHERE ca.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE ca.id = $1 AND bm.user_id = $2`,
       [id, decoded.userId]
     );
 
     if (cardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Card non trouvée' },
+        { success: false, message: 'Card non trouvée ou accès refusé' },
         { status: 404 }
       );
     }
@@ -95,18 +96,19 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Verify user owns the board containing this card
+    // Verify user has access to the board containing this card
     const cardCheck = await query(
       `SELECT ca.id FROM cards ca
        JOIN columns c ON ca.column_id = c.id
        JOIN boards b ON c.board_id = b.id
-       WHERE ca.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE ca.id = $1 AND bm.user_id = $2`,
       [id, decoded.userId]
     );
 
     if (cardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Card non trouvée' },
+        { success: false, message: 'Card non trouvée ou accès refusé' },
         { status: 404 }
       );
     }

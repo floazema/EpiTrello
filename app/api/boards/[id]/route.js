@@ -53,11 +53,14 @@ export async function GET(request, { params }) {
       [id]
     );
 
-    // Get cards for all columns in this board
+    // Get cards for all columns in this board with comment counts
     const cardsResult = await query(
-      `SELECT c.* FROM cards c
+      `SELECT c.*, COUNT(com.id) as comment_count
+       FROM cards c
        JOIN columns col ON c.column_id = col.id
+       LEFT JOIN comments com ON c.id = com.card_id
        WHERE col.board_id = $1
+       GROUP BY c.id
        ORDER BY c.position`,
       [id]
     );

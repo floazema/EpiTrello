@@ -33,15 +33,15 @@ export async function POST(request) {
       );
     }
 
-    // Verify user owns the board
+    // Verify user has access to the board
     const boardCheck = await query(
-      'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
+      'SELECT b.id FROM boards b JOIN board_members bm ON b.id = bm.board_id WHERE b.id = $1 AND bm.user_id = $2',
       [board_id, decoded.userId]
     );
 
     if (boardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Board non trouvé' },
+        { success: false, message: 'Board non trouvé ou accès refusé' },
         { status: 404 }
       );
     }
