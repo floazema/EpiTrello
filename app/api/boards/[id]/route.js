@@ -36,16 +36,6 @@ export async function GET(request, { params }) {
         { success: false, message: 'Board non trouvé ou accès refusé' },
         { status: 404 }
       );
-
-      if (memberCheck.rows.length === 0) {
-        return NextResponse.json(
-          { success: false, message: 'Board non trouvé' },
-          { status: 404 }
-        );
-      }
-
-      boardResult = memberCheck;
-      userRole = memberCheck.rows[0].role;
     }
 
     const userRole = accessCheck.rows[0].role;

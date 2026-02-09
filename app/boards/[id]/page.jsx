@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import TeamModal from "@/components/TeamModal";
+
 
 export default function BoardPage() {
   const router = useRouter();

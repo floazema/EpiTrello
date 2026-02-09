@@ -39,27 +39,10 @@ export async function GET(request) {
       [decoded.userId]
     );
 
-    // Get boards where user is a member
-    const memberBoards = await query(
-      `SELECT b.id, b.name, b.description, b.color, b.created_at, bm.role,
-              u.name as owner_name
-       FROM boards b
-       JOIN board_members bm ON b.id = bm.board_id
-       JOIN users u ON b.owner_id = u.id
-       WHERE bm.user_id = $1
-       ORDER BY b.created_at DESC`,
-      [decoded.userId]
-    );
-
-    const boards = [
-      ...ownedBoards.rows,
-      ...memberBoards.rows
-    ];
-
     return NextResponse.json(
       {
         success: true,
-        boards: boards,
+        boards: result.rows,
       },
       { status: 200 }
     );
@@ -128,7 +111,10 @@ export async function POST(request) {
       {
         success: true,
         message: 'Board créé avec succès',
-        board: board,
+        board: {
+          ...board,
+          role: 'owner'
+        },
       },
       { status: 201 }
     );
