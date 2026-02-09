@@ -25,16 +25,33 @@ export async function GET(request, { params }) {
       );
     }
 
-    const boardResult = await query(
-      'SELECT id, name, description, color, created_at FROM boards WHERE id = $1 AND owner_id = $2',
+    // First check if user is owner
+    let boardResult = await query(
+      'SELECT id, name, description, color, owner_id, created_at FROM boards WHERE id = $1 AND owner_id = $2',
       [id, decoded.userId]
     );
 
+    let userRole = 'owner';
+
+    // If not owner, check if user is a member
     if (boardResult.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Board non trouvé' },
-        { status: 404 }
+      const memberCheck = await query(
+        `SELECT b.id, b.name, b.description, b.color, b.owner_id, b.created_at, bm.role
+         FROM boards b
+         JOIN board_members bm ON b.id = bm.board_id
+         WHERE b.id = $1 AND bm.user_id = $2`,
+        [id, decoded.userId]
       );
+
+      if (memberCheck.rows.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'Board non trouvé' },
+          { status: 404 }
+        );
+      }
+
+      boardResult = memberCheck;
+      userRole = memberCheck.rows[0].role;
     }
 
     const board = boardResult.rows[0];
@@ -45,12 +62,28 @@ export async function GET(request, { params }) {
       [id]
     );
 
+    // Get cards for all columns in this board
+    const cardsResult = await query(
+      `SELECT c.* FROM cards c
+       JOIN columns col ON c.column_id = col.id
+       WHERE col.board_id = $1
+       ORDER BY c.position`,
+      [id]
+    );
+
+    // Organize cards by column
+    const columns = columnsResult.rows.map(column => ({
+      ...column,
+      cards: cardsResult.rows.filter(card => card.column_id === column.id)
+    }));
+
     return NextResponse.json(
       {
         success: true,
         board: {
           ...board,
-          columns: columnsResult.rows,
+          columns,
+          userRole,
         },
       },
       { status: 200 }
