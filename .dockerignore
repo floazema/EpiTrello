@@ -1,12 +1,47 @@
+# Dependencies
 node_modules
-.next
 npm-debug.log*
-.DS_Store
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+.next
+out
+dist
+
+# Environment variables
+.env
 .env*.local
-*.log
+.env.production
+
+# Testing
+coverage
+.nyc_output
+
+# IDE and OS files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Git
 .git
 .gitignore
-README.md
-docker-compose.yml
+.gitattributes
+
+# Docker
 Dockerfile
+docker-compose.yml
 .dockerignore
+
+# Documentation (peut être inclus si nécessaire)
+*.md
+docs/
+
+# Misc
+.editorconfig
+.eslintcache
+taskly/
