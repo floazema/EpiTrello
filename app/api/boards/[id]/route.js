@@ -25,34 +25,25 @@ export async function GET(request, { params }) {
       );
     }
 
-    // First check if user is owner
-    let boardResult = await query(
-      'SELECT id, name, description, color, owner_id, created_at FROM boards WHERE id = $1 AND owner_id = $2',
+    // Check user has access to this board
+    const accessCheck = await query(
+      'SELECT bm.role FROM board_members bm WHERE bm.board_id = $1 AND bm.user_id = $2',
       [id, decoded.userId]
     );
 
-    let userRole = 'owner';
-
-    // If not owner, check if user is a member
-    if (boardResult.rows.length === 0) {
-      const memberCheck = await query(
-        `SELECT b.id, b.name, b.description, b.color, b.owner_id, b.created_at, bm.role
-         FROM boards b
-         JOIN board_members bm ON b.id = bm.board_id
-         WHERE b.id = $1 AND bm.user_id = $2`,
-        [id, decoded.userId]
+    if (accessCheck.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'Board non trouvé ou accès refusé' },
+        { status: 404 }
       );
-
-      if (memberCheck.rows.length === 0) {
-        return NextResponse.json(
-          { success: false, message: 'Board non trouvé' },
-          { status: 404 }
-        );
-      }
-
-      boardResult = memberCheck;
-      userRole = memberCheck.rows[0].role;
     }
+
+    const userRole = accessCheck.rows[0].role;
+
+    const boardResult = await query(
+      'SELECT id, name, description, color, created_at FROM boards WHERE id = $1',
+      [id]
+    );
 
     const board = boardResult.rows[0];
 
@@ -82,6 +73,7 @@ export async function GET(request, { params }) {
         success: true,
         board: {
           ...board,
+          role: userRole,
           columns,
           userRole,
         },
@@ -119,9 +111,22 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    const result = await query(
-      'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id',
+    // Verify user is owner
+    const ownerCheck = await query(
+      'SELECT bm.role FROM board_members bm WHERE bm.board_id = $1 AND bm.user_id = $2',
       [id, decoded.userId]
+    );
+
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].role !== 'owner') {
+      return NextResponse.json(
+        { success: false, message: 'Seul le propriétaire peut supprimer le board' },
+        { status: 403 }
+      );
+    }
+
+    const result = await query(
+      'DELETE FROM boards WHERE id = $1 RETURNING id',
+      [id]
     );
 
     if (result.rows.length === 0) {
@@ -171,9 +176,22 @@ export async function PATCH(request, { params }) {
 
     const { name, description, color } = await request.json();
 
+    // Verify user is owner
+    const ownerCheck = await query(
+      'SELECT bm.role FROM board_members bm WHERE bm.board_id = $1 AND bm.user_id = $2',
+      [id, decoded.userId]
+    );
+
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].role !== 'owner') {
+      return NextResponse.json(
+        { success: false, message: 'Seul le propriétaire peut modifier le board' },
+        { status: 403 }
+      );
+    }
+
     const result = await query(
-      'UPDATE boards SET name = COALESCE($1, name), description = COALESCE($2, description), color = COALESCE($3, color), updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND owner_id = $5 RETURNING id, name, description, color, updated_at',
-      [name, description, color, id, decoded.userId]
+      'UPDATE boards SET name = COALESCE($1, name), description = COALESCE($2, description), color = COALESCE($3, color), updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, name, description, color, updated_at',
+      [name, description, color, id]
     );
 
     if (result.rows.length === 0) {

@@ -9,10 +9,12 @@ import {
   ArrowLeft,
   Plus,
   Loader2,
-  Users,
+  LogOut,
   LayoutDashboard,
+  Users,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+
 
 export default function BoardPage() {
   const router = useRouter();
@@ -339,6 +341,15 @@ export default function BoardPage() {
     setDropTargetIndex(null);
   };
 
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/");
+    } catch (e) {
+      // ignore
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
@@ -391,10 +402,26 @@ export default function BoardPage() {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowTeamModal(true)}>
-            <Users className="h-4 w-4 mr-2" />
-            Équipe
-          </Button>
+          <div className="flex items-center gap-2">
+            {board && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTeamModal(true)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Équipe
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -506,10 +533,10 @@ export default function BoardPage() {
 
       {/* Team Modal */}
       <TeamModal
+        boardId={boardId}
         isOpen={showTeamModal}
         onClose={() => setShowTeamModal(false)}
-        boardId={boardId}
-        isOwner={board?.userRole === 'owner'}
+        isOwner={board?.role === 'owner'}
       />
     </div>
   );
