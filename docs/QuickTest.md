@@ -9,20 +9,11 @@ A comprehensive 3-level testing strategy (Unit, Integration, E2E) aligned with a
 ## Quick Test Commands
 
 ```bash
-# Run all tests
-npm run test
-
 # Run only unit tests
 npm run test:unit
 
-# Run only integration tests
-npm run test:integration
-
 # Run only E2E tests
 npm run test:e2e
-
-# Watch mode
-npm run test:watch
 
 # Coverage report
 npm run test:coverage
