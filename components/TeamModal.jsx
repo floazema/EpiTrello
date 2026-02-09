@@ -1,236 +1,176 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, UserPlus, X, Crown, User, Mail, Trash2 } from "lucide-react";
+import { X, UserPlus, Users, Loader2, Crown, Mail } from "lucide-react";
 
-export default function TeamModal({ isOpen, onClose, boardId, isOwner }) {
+export default function TeamModal({ boardId, isOpen, onClose, isOwner }) {
     const [members, setMembers] = useState([]);
-    const [owner, setOwner] = useState(null);
-    const [pendingInvitations, setPendingInvitations] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [inviting, setInviting] = useState(false);
+    const [inviteeEmail, setInviteeEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [sending, setSending] = useState(false);
     const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
 
     useEffect(() => {
-        if (isOpen && boardId) {
+        if (isOpen) {
             loadMembers();
         }
-    }, [isOpen, boardId]);
+    }, [isOpen]);
 
     const loadMembers = async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/boards/${boardId}/members`);
             const data = await res.json();
-
             if (data.success) {
-                setOwner(data.owner);
                 setMembers(data.members);
-                setPendingInvitations(data.pendingInvitations);
             }
         } catch (e) {
-            console.error("Failed to load members:", e);
+            console.error("Error loading members:", e);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleInvite = async (e) => {
+    const sendInvitation = async (e) => {
         e.preventDefault();
-        if (!inviteEmail.trim()) return;
-
-        setInviting(true);
+        setSending(true);
         setError("");
-        setSuccessMessage("");
 
         try {
-            const res = await fetch(`/api/boards/${boardId}/members`, {
+            const res = await fetch("/api/invitations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: inviteEmail.trim() }),
+                body: JSON.stringify({
+                    boardId,
+                    inviteeEmail: inviteeEmail.trim(),
+                }),
             });
 
             const data = await res.json();
 
             if (data.success) {
-                setSuccessMessage("Invitation envoyée !");
-                setInviteEmail("");
-                loadMembers();
+                setInviteeEmail("");
+                setError("");
             } else {
                 setError(data.message);
             }
         } catch (e) {
             setError("Erreur lors de l'envoi de l'invitation");
         } finally {
-            setInviting(false);
+            setSending(false);
         }
     };
 
-    const handleRemoveMember = async (memberId) => {
-        if (!confirm("Retirer ce membre du board ?")) return;
-
-        try {
-            const res = await fetch(`/api/boards/${boardId}/members?memberId=${memberId}`, {
-                method: "DELETE",
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                loadMembers();
-            }
-        } catch (e) {
-            console.error("Failed to remove member:", e);
-        }
-    };
-
-    const handleCancelInvitation = async (invitationId) => {
-        try {
-            const res = await fetch(`/api/boards/${boardId}/members?invitationId=${invitationId}`, {
-                method: "DELETE",
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                loadMembers();
-            }
-        } catch (e) {
-            console.error("Failed to cancel invitation:", e);
-        }
-    };
+    if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Gérer l'équipe" size="lg">
-            {loading ? (
-                <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-                </div>
-            ) : (
-                <div className="space-y-6">
-                    {/* Invite Form - Only for owner */}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-lg">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            <CardTitle>Équipe du Board</CardTitle>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <CardDescription>
+                        Gérez les membres de votre board
+                    </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                    {/* Invite Section - Only for Owners */}
                     {isOwner && (
-                        <form onSubmit={handleInvite} className="space-y-3">
-                            <Label className="text-base font-semibold">Inviter un membre</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    type="email"
-                                    placeholder="email@exemple.com"
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                    disabled={inviting}
-                                />
-                                <Button type="submit" disabled={inviting || !inviteEmail.trim()}>
-                                    {inviting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <UserPlus className="h-4 w-4 mr-2" />
-                                            Inviter
-                                        </>
-                                    )}
-                                </Button>
+                        <form onSubmit={sendInvitation} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Inviter un membre</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="email@example.com"
+                                        value={inviteeEmail}
+                                        onChange={(e) => setInviteeEmail(e.target.value)}
+                                        disabled={sending}
+                                    />
+                                    <Button type="submit" disabled={sending || !inviteeEmail.trim()}>
+                                        {sending ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <UserPlus className="h-4 w-4 mr-2" />
+                                                Inviter
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                                {error && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                                )}
                             </div>
-                            {error && (
-                                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                            )}
-                            {successMessage && (
-                                <p className="text-sm text-green-600 dark:text-green-400">{successMessage}</p>
-                            )}
                         </form>
                     )}
 
-                    {/* Owner */}
-                    <div className="space-y-3">
-                        <Label className="text-base font-semibold">Propriétaire</Label>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-full">
-                                <Crown className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-zinc-900 dark:text-zinc-100">{owner?.name}</p>
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400">{owner?.email}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Members */}
-                    <div className="space-y-3">
-                        <Label className="text-base font-semibold">
+                    {/* Members List */}
+                    <div className="space-y-2">
+                        <h3 className="font-medium text-sm text-zinc-700 dark:text-zinc-300">
                             Membres ({members.length})
-                        </Label>
-                        {members.length === 0 ? (
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 py-2">
-                                Aucun membre pour le moment
-                            </p>
+                        </h3>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+                            </div>
                         ) : (
                             <div className="space-y-2">
                                 {members.map((member) => (
                                     <div
                                         key={member.id}
-                                        className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg group"
+                                        className="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-zinc-800"
                                     >
-                                        <div className="bg-zinc-200 dark:bg-zinc-700 p-2 rounded-full">
-                                            <User className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-full">
+                                                <Mail className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-sm">{member.name}</p>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                                    {member.email}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-zinc-900 dark:text-zinc-100">{member.name}</p>
-                                            <p className="text-sm text-zinc-500 dark:text-zinc-400">{member.email}</p>
-                                        </div>
-                                        {isOwner && (
-                                            <button
-                                                onClick={() => handleRemoveMember(member.id)}
-                                                className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                            >
-                                                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                                            </button>
+                                        {member.role === "owner" && (
+                                            <div className="flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded-md text-xs font-medium">
+                                                <Crown className="h-3 w-3" />
+                                                Propriétaire
+                                            </div>
+                                        )}
+                                        {member.role === "member" && (
+                                            <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                                                Membre
+                                            </div>
                                         )}
                                     </div>
                                 ))}
+                                {members.length === 0 && (
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
+                                        Aucun membre pour le moment
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
-
-                    {/* Pending Invitations */}
-                    {isOwner && pendingInvitations.length > 0 && (
-                        <div className="space-y-3">
-                            <Label className="text-base font-semibold">
-                                Invitations en attente ({pendingInvitations.length})
-                            </Label>
-                            <div className="space-y-2">
-                                {pendingInvitations.map((invitation) => (
-                                    <div
-                                        key={invitation.id}
-                                        className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg"
-                                    >
-                                        <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-full">
-                                            <Mail className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                                                {invitation.invitee_email}
-                                            </p>
-                                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                                En attente...
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleCancelInvitation(invitation.id)}
-                                            className="p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-lg transition-all"
-                                        >
-                                            <X className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </Modal>
+                </CardContent>
+            </Card>
+        </div>
     );
 }

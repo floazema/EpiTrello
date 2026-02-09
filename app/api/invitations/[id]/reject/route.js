@@ -1,52 +1,76 @@
-import { query } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth';
+import { query } from '@/lib/db';
 
-// POST /api/invitations/[id]/reject - Reject an invitation
+// POST - Reject an invitation
 export async function POST(request, { params }) {
     try {
+        const { id } = await params;
         const cookieStore = await cookies();
         const token = cookieStore.get('auth_token')?.value;
 
         if (!token) {
-            return Response.json({ success: false, message: 'Not authenticated' }, { status: 401 });
+            return NextResponse.json(
+                { success: false, message: 'Non authentifié' },
+                { status: 401 }
+            );
         }
 
         const decoded = verifyToken(token);
         if (!decoded) {
-            return Response.json({ success: false, message: 'Invalid token' }, { status: 401 });
+            return NextResponse.json(
+                { success: false, message: 'Token invalide' },
+                { status: 401 }
+            );
         }
 
-        const { id } = await params;
-        const invitationId = parseInt(id);
-
         // Get user email
-        const userResult = await query('SELECT email FROM users WHERE id = $1', [decoded.userId]);
+        const userResult = await query(
+            'SELECT email FROM users WHERE id = $1',
+            [decoded.userId]
+        );
+
         if (userResult.rows.length === 0) {
-            return Response.json({ success: false, message: 'User not found' }, { status: 404 });
+            return NextResponse.json(
+                { success: false, message: 'Utilisateur non trouvé' },
+                { status: 404 }
+            );
         }
 
         const userEmail = userResult.rows[0].email;
 
-        // Check if invitation exists and belongs to this user
+        // Check invitation exists and is pending
         const invitationResult = await query(
-            'SELECT * FROM board_invitations WHERE id = $1 AND invitee_email = $2 AND status = $3',
-            [invitationId, userEmail, 'pending']
+            'SELECT * FROM invitations WHERE id = $1 AND invitee_email = $2 AND status = $3',
+            [id, userEmail, 'pending']
         );
 
         if (invitationResult.rows.length === 0) {
-            return Response.json({ success: false, message: 'Invitation not found' }, { status: 404 });
+            return NextResponse.json(
+                { success: false, message: 'Invitation non trouvée' },
+                { status: 404 }
+            );
         }
 
         // Update invitation status
         await query(
-            'UPDATE board_invitations SET status = $1, invitee_id = $2, updated_at = NOW() WHERE id = $3',
-            ['rejected', decoded.userId, invitationId]
+            'UPDATE invitations SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            ['rejected', id]
         );
 
-        return Response.json({ success: true, message: 'Invitation rejected' });
+        return NextResponse.json(
+            {
+                success: true,
+                message: 'Invitation refusée',
+            },
+            { status: 200 }
+        );
     } catch (error) {
         console.error('Error rejecting invitation:', error);
-        return Response.json({ success: false, message: 'Server error' }, { status: 500 });
+        return NextResponse.json(
+            { success: false, message: 'Erreur serveur' },
+            { status: 500 }
+        );
     }
 }
