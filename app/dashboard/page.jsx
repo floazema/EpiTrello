@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, LayoutDashboard, Trash2, Loader2, LogOut } from "lucide-react";
+import InvitationsCard from "@/components/InvitationsCard";
+import { Plus, LayoutDashboard, Trash2, Loader2, LogOut, Users } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -31,18 +32,18 @@ export default function DashboardPage() {
       // Load user
       const userRes = await fetch("/api/auth/me");
       const userData = await userRes.json();
-      
+
       if (!userData.success) {
         router.push("/login");
         return;
       }
-      
+
       setUser(userData.user);
 
       // Load boards
       const boardsRes = await fetch("/api/boards");
       const boardsData = await boardsRes.json();
-      
+
       if (boardsData.success) {
         setBoards(boardsData.boards);
       }
@@ -155,6 +156,9 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Invitations */}
+        <InvitationsCard onInvitationHandled={loadData} />
+
         {/* Boards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Create Board Card */}
@@ -174,7 +178,15 @@ export default function DashboardPage() {
               onClick={() => router.push(`/boards/${board.id}`)}
             >
               <CardHeader>
-                <CardTitle className="text-lg">{board.name}</CardTitle>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-lg">{board.name}</CardTitle>
+                  {board.role !== 'owner' && (
+                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      Partagé
+                    </span>
+                  )}
+                </div>
                 {board.description && (
                   <CardDescription className="line-clamp-2">
                     {board.description}
@@ -183,18 +195,24 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xs text-zinc-500 dark:text-zinc-600">
-                  Created {new Date(board.created_at).toLocaleDateString()}
+                  {board.role === 'owner' ? (
+                    `Créé le ${new Date(board.created_at).toLocaleDateString()}`
+                  ) : (
+                    `Par ${board.owner_name}`
+                  )}
                 </div>
               </CardContent>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteBoard(board.id);
-                }}
-                className="absolute top-3 right-3 p-2 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all"
-              >
-                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-              </button>
+              {board.role === 'owner' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteBoard(board.id);
+                  }}
+                  className="absolute top-3 right-3 p-2 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                >
+                  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </button>
+              )}
             </Card>
           ))}
         </div>

@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import KanbanColumn from "@/components/kanban/KanbanColumn";
+import TeamModal from "@/components/TeamModal";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Plus,
   Loader2,
-  Settings,
+  Users,
   LayoutDashboard,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export default function BoardPage() {
   const [newColumnName, setNewColumnName] = useState("");
   const [draggedColumnId, setDraggedColumnId] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const [showTeamModal, setShowTeamModal] = useState(false);
 
   useEffect(() => {
     loadBoard();
@@ -389,9 +391,9 @@ export default function BoardPage() {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
+          <Button variant="ghost" size="sm" onClick={() => setShowTeamModal(true)}>
+            <Users className="h-4 w-4 mr-2" />
+            Équipe
           </Button>
         </div>
       </header>
@@ -501,6 +503,14 @@ export default function BoardPage() {
           </div>
         </div>
       </div>
+
+      {/* Team Modal */}
+      <TeamModal
+        isOpen={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        boardId={boardId}
+        isOwner={board?.userRole === 'owner'}
+      />
     </div>
   );
 }

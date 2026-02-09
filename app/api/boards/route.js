@@ -24,15 +24,35 @@ export async function GET(request) {
       );
     }
 
-    const result = await query(
-      'SELECT id, name, description, color, created_at FROM boards WHERE owner_id = $1 ORDER BY created_at DESC',
+    // Get boards where user is owner
+    const ownedBoards = await query(
+      `SELECT id, name, description, color, created_at, 'owner' as role 
+       FROM boards WHERE owner_id = $1 
+       ORDER BY created_at DESC`,
       [decoded.userId]
     );
+
+    // Get boards where user is a member
+    const memberBoards = await query(
+      `SELECT b.id, b.name, b.description, b.color, b.created_at, bm.role,
+              u.name as owner_name
+       FROM boards b
+       JOIN board_members bm ON b.id = bm.board_id
+       JOIN users u ON b.owner_id = u.id
+       WHERE bm.user_id = $1
+       ORDER BY b.created_at DESC`,
+      [decoded.userId]
+    );
+
+    const boards = [
+      ...ownedBoards.rows,
+      ...memberBoards.rows
+    ];
 
     return NextResponse.json(
       {
         success: true,
-        boards: result.rows,
+        boards: boards,
       },
       { status: 200 }
     );
