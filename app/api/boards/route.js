@@ -25,7 +25,17 @@ export async function GET(request) {
     }
 
     const result = await query(
-      'SELECT id, name, description, color, created_at FROM boards WHERE owner_id = $1 ORDER BY created_at DESC',
+      `SELECT 
+        b.id, 
+        b.name, 
+        b.description, 
+        b.color, 
+        b.created_at,
+        bm.role
+      FROM boards b
+      JOIN board_members bm ON b.id = bm.board_id
+      WHERE bm.user_id = $1 
+      ORDER BY b.created_at DESC`,
       [decoded.userId]
     );
 
@@ -81,6 +91,12 @@ export async function POST(request) {
     );
 
     const board = result.rows[0];
+
+    // Add owner to board_members
+    await query(
+      'INSERT INTO board_members (board_id, user_id, role) VALUES ($1, $2, $3)',
+      [board.id, decoded.userId, 'owner']
+    );
 
     // Create default columns
     const defaultColumns = ['To Do', 'In Progress', 'Done'];

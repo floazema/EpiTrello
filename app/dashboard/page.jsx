@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, LayoutDashboard, Trash2, Loader2, LogOut } from "lucide-react";
+import { Plus, LayoutDashboard, Trash2, Loader2, LogOut, Users } from "lucide-react";
+import InvitationCard from "@/components/InvitationCard";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [boards, setBoards] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -31,20 +33,28 @@ export default function DashboardPage() {
       // Load user
       const userRes = await fetch("/api/auth/me");
       const userData = await userRes.json();
-      
+
       if (!userData.success) {
         router.push("/login");
         return;
       }
-      
+
       setUser(userData.user);
 
       // Load boards
       const boardsRes = await fetch("/api/boards");
       const boardsData = await boardsRes.json();
-      
+
       if (boardsData.success) {
         setBoards(boardsData.boards);
+      }
+
+      // Load invitations
+      const invitationsRes = await fetch("/api/invitations");
+      const invitationsData = await invitationsRes.json();
+
+      if (invitationsData.success) {
+        setInvitations(invitationsData.invitations);
       }
     } catch (e) {
       setError("Failed to load data");
@@ -108,6 +118,45 @@ export default function DashboardPage() {
     }
   };
 
+  const acceptInvitation = async (invitationId) => {
+    try {
+      const res = await fetch(`/api/invitations/${invitationId}/accept`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Remove invitation from list and reload boards
+        setInvitations(invitations.filter(inv => inv.id !== invitationId));
+        loadData();
+      } else {
+        setError(data.message);
+      }
+    } catch (e) {
+      setError("Erreur lors de l'acceptation");
+    }
+  };
+
+  const rejectInvitation = async (invitationId) => {
+    try {
+      const res = await fetch(`/api/invitations/${invitationId}/reject`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Remove invitation from list
+        setInvitations(invitations.filter(inv => inv.id !== invitationId));
+      } else {
+        setError(data.message);
+      }
+    } catch (e) {
+      setError("Erreur lors du refus");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
@@ -155,6 +204,25 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Invitations Section */}
+        {invitations.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              Invitations en attente ({invitations.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {invitations.map((invitation) => (
+                <InvitationCard
+                  key={invitation.id}
+                  invitation={invitation}
+                  onAccept={acceptInvitation}
+                  onReject={rejectInvitation}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Boards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Create Board Card */}
@@ -174,7 +242,17 @@ export default function DashboardPage() {
               onClick={() => router.push(`/boards/${board.id}`)}
             >
               <CardHeader>
-                <CardTitle className="text-lg">{board.name}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{board.name}</CardTitle>
+                  {board.role && (
+                    <span className={`text-xs px-2 py-1 rounded-md font-medium ${board.role === 'owner'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                        : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                      }`}>
+                      {board.role === 'owner' ? 'Propriétaire' : 'Membre'}
+                    </span>
+                  )}
+                </div>
                 {board.description && (
                   <CardDescription className="line-clamp-2">
                     {board.description}
