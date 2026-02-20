@@ -16,6 +16,7 @@ export default function KanbanColumn({
   onDragStart,
   onDragEnd,
   isDragging,
+  members,
 }) {
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
@@ -211,6 +212,7 @@ export default function KanbanColumn({
         onClose={handleCloseModal}
         onSubmit={handleCardSubmit}
         card={editingCard}
+        members={members}
       />
     </div>
   );

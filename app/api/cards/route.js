@@ -24,7 +24,7 @@ export async function POST(request) {
       );
     }
 
-    const { column_id, title, description, priority, due_date, tags, color } = await request.json();
+    const { column_id, title, description, priority, due_date, tags, color, assigned_to } = await request.json();
 
     if (!column_id || !title || title.trim() === '') {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function POST(request) {
     const nextPosition = positionResult.rows[0].next_position;
 
     const result = await query(
-      'INSERT INTO cards (column_id, title, description, priority, due_date, tags, color, position) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      'INSERT INTO cards (column_id, title, description, priority, due_date, tags, color, assigned_to, position) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
       [
         column_id,
         title.trim(),
@@ -67,6 +67,7 @@ export async function POST(request) {
         due_date || null,
         tags || null,
         color || null,
+        assigned_to || null,
         nextPosition
       ]
     );

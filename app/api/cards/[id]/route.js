@@ -25,7 +25,9 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const { title, description, priority, due_date, tags, color } = await request.json();
+    const body = await request.json();
+    const { title, description, priority, due_date, tags, color } = body;
+    const assigned_to = body.assigned_to;
 
     // Verify user has access to the board containing this card
     const cardCheck = await query(
@@ -51,10 +53,11 @@ export async function PATCH(request, { params }) {
         priority = COALESCE($3, priority),
         due_date = CASE WHEN $4::text IS NULL THEN due_date ELSE $4::date END,
         tags = CASE WHEN $5::text[] IS NULL THEN tags ELSE $5::text[] END,
-        color = COALESCE($6, color), 
+        color = COALESCE($6, color),
+        assigned_to = CASE WHEN $7::text = '__unset__' THEN NULL ELSE COALESCE($7::integer, assigned_to) END,
         updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $7 RETURNING *`,
-      [title, description, priority, due_date, tags, color, id]
+       WHERE id = $8 RETURNING *`,
+      [title, description, priority, due_date, tags, color, assigned_to === null ? '__unset__' : (assigned_to || null), id]
     );
 
     return NextResponse.json(

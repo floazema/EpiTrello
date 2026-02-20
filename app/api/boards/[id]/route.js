@@ -53,15 +53,30 @@ export async function GET(request, { params }) {
       [id]
     );
 
-    // Get cards for all columns in this board with comment counts
+    // Get cards for all columns in this board with comment counts, attachment counts, and assigned user
     const cardsResult = await query(
-      `SELECT c.*, COUNT(com.id) as comment_count
+      `SELECT c.*, 
+              COUNT(DISTINCT com.id) as comment_count,
+              COUNT(DISTINCT att.id) as attachment_count,
+              u.name as assigned_to_name
        FROM cards c
        JOIN columns col ON c.column_id = col.id
        LEFT JOIN comments com ON c.id = com.card_id
+       LEFT JOIN attachments att ON c.id = att.card_id
+       LEFT JOIN users u ON c.assigned_to = u.id
        WHERE col.board_id = $1
-       GROUP BY c.id
+       GROUP BY c.id, u.name
        ORDER BY c.position`,
+      [id]
+    );
+
+    // Get board members
+    const membersResult = await query(
+      `SELECT u.id as user_id, u.name, u.email, bm.role
+       FROM board_members bm
+       JOIN users u ON bm.user_id = u.id
+       WHERE bm.board_id = $1
+       ORDER BY bm.role DESC, u.name ASC`,
       [id]
     );
 
@@ -78,6 +93,7 @@ export async function GET(request, { params }) {
           ...board,
           role: userRole,
           columns,
+          members: membersResult.rows,
           userRole,
         },
       },
