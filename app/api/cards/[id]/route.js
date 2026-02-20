@@ -25,20 +25,23 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const { title, description, priority, due_date, tags, color } = await request.json();
+    const body = await request.json();
+    const { title, description, priority, due_date, tags, color } = body;
+    const assigned_to = body.assigned_to;
 
-    // Verify user owns the board containing this card
+    // Verify user has access to the board containing this card
     const cardCheck = await query(
       `SELECT ca.id FROM cards ca
        JOIN columns c ON ca.column_id = c.id
        JOIN boards b ON c.board_id = b.id
-       WHERE ca.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE ca.id = $1 AND bm.user_id = $2`,
       [id, decoded.userId]
     );
 
     if (cardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Card non trouvée' },
+        { success: false, message: 'Card non trouvée ou accès refusé' },
         { status: 404 }
       );
     }
@@ -50,10 +53,11 @@ export async function PATCH(request, { params }) {
         priority = COALESCE($3, priority),
         due_date = CASE WHEN $4::text IS NULL THEN due_date ELSE $4::date END,
         tags = CASE WHEN $5::text[] IS NULL THEN tags ELSE $5::text[] END,
-        color = COALESCE($6, color), 
+        color = COALESCE($6, color),
+        assigned_to = CASE WHEN $7::text = '__unset__' THEN NULL ELSE COALESCE($7::integer, assigned_to) END,
         updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $7 RETURNING *`,
-      [title, description, priority, due_date, tags, color, id]
+       WHERE id = $8 RETURNING *`,
+      [title, description, priority, due_date, tags, color, assigned_to === null ? '__unset__' : (assigned_to || null), id]
     );
 
     return NextResponse.json(
@@ -95,18 +99,19 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Verify user owns the board containing this card
+    // Verify user has access to the board containing this card
     const cardCheck = await query(
       `SELECT ca.id FROM cards ca
        JOIN columns c ON ca.column_id = c.id
        JOIN boards b ON c.board_id = b.id
-       WHERE ca.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE ca.id = $1 AND bm.user_id = $2`,
       [id, decoded.userId]
     );
 
     if (cardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Card non trouvée' },
+        { success: false, message: 'Card non trouvée ou accès refusé' },
         { status: 404 }
       );
     }

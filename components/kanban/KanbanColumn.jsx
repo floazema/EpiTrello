@@ -13,6 +13,10 @@ export default function KanbanColumn({
   onUpdateColumn,
   onDeleteColumn,
   onCardDrop,
+  onDragStart,
+  onDragEnd,
+  isDragging,
+  members,
 }) {
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
@@ -61,7 +65,6 @@ export default function KanbanColumn({
 
   const handleDrop = async (e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragOver(false);
 
     try {
@@ -71,9 +74,12 @@ export default function KanbanColumn({
       const data = JSON.parse(rawData);
 
       if (data.type === "column") {
-        // Dropping a column - ignore in column component, handled by parent
+        // Dropping a column - let it bubble to parent, DON'T stop propagation
         return;
       }
+
+      // Only stop propagation for card drops
+      e.stopPropagation();
 
       if (data.type === "card") {
         // Dropping a card
@@ -91,13 +97,18 @@ export default function KanbanColumn({
   return (
     <div
       className={`flex flex-col w-80 flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 ${isDragOver ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
-        }`}
+        } ${isDragging ? "opacity-50" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-3 cursor-grab active:cursor-grabbing">
+      <div
+        className="flex items-center justify-between mb-3 cursor-grab active:cursor-grabbing"
+        draggable={!isEditingColumn}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
         {isEditingColumn ? (
           <form onSubmit={handleUpdateColumn} className="flex-1 mr-2">
             <input
@@ -201,6 +212,7 @@ export default function KanbanColumn({
         onClose={handleCloseModal}
         onSubmit={handleCardSubmit}
         card={editingCard}
+        members={members}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Loader2, Tag, Calendar, AlertCircle } from "lucide-react";
+import { Loader2, Tag, Calendar, AlertCircle, User, Paperclip, X, Download, Trash2 } from "lucide-react";
 
 const PRIORITY_OPTIONS = [
   { value: "low", label: "Low", color: "text-green-600 dark:text-green-400" },
@@ -16,16 +16,24 @@ const PRIORITY_OPTIONS = [
   { value: "urgent", label: "Urgent", color: "text-red-600 dark:text-red-400" },
 ];
 
-export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
+export default function CardModal({ isOpen, onClose, onSubmit, card = null, members = [] }) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
     due_date: "",
     tags: "",
+    assigned_to: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -35,6 +43,7 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
         priority: card.priority || "medium",
         due_date: card.due_date ? card.due_date.split('T')[0] : "",
         tags: card.tags ? card.tags.join(", ") : "",
+        assigned_to: card.assigned_to ? String(card.assigned_to) : "",
       });
     } else {
       setFormData({
@@ -43,10 +52,138 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
         priority: "medium",
         due_date: "",
         tags: "",
+        assigned_to: "",
       });
     }
     setError("");
+    setComments([]);
+    setNewComment("");
+    setAttachments([]);
+
+    // Load comments and attachments if editing an existing card
+    if (card?.id && isOpen) {
+      loadComments(card.id);
+      loadAttachments(card.id);
+    }
   }, [card, isOpen]);
+
+  const loadComments = async (cardId) => {
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`/api/cards/${cardId}/comments`);
+      const data = await res.json();
+      if (data.success) {
+        setComments(data.comments);
+      }
+    } catch (err) {
+      console.error('Error loading comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const loadAttachments = async (cardId) => {
+    setLoadingAttachments(true);
+    try {
+      const res = await fetch(`/api/cards/${cardId}/attachments`);
+      const data = await res.json();
+      if (data.success) {
+        setAttachments(data.attachments);
+      }
+    } catch (err) {
+      console.error('Error loading attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !card?.id) return;
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch(`/api/cards/${card.id}/attachments`, {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAttachments([data.attachment, ...attachments]);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to upload file');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!confirm('Supprimer cette pièce jointe ?')) return;
+
+    try {
+      const res = await fetch(`/api/attachments/${attachmentId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setAttachments(attachments.filter(a => a.id !== attachmentId));
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to delete attachment');
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !card?.id) return;
+
+    setAddingComment(true);
+    try {
+      const res = await fetch(`/api/cards/${card.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment.trim() }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setComments([...comments, data.comment]);
+        setNewComment("");
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to add comment');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!confirm('Delete this comment?')) return;
+
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setComments(comments.filter(c => c.id !== commentId));
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Failed to delete comment');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,6 +208,7 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
         priority: formData.priority,
         due_date: formData.due_date || null,
         tags: tagsArray.length > 0 ? tagsArray : null,
+        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null,
       };
 
       await onSubmit(submitData);
@@ -80,6 +218,12 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   return (
@@ -175,25 +319,200 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
           </div>
         </div>
 
-        {/* Tags */}
-        <div className="space-y-2">
-          <Label htmlFor="tags" className="text-base font-semibold flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Tags
-          </Label>
-          <Input
-            id="tags"
-            value={formData.tags}
-            onChange={(e) =>
-              setFormData({ ...formData, tags: e.target.value })
-            }
-            placeholder="bug, feature, design (comma separated)"
-            disabled={isLoading}
-          />
-          <p className="text-xs text-zinc-500 dark:text-zinc-500">
-            Separate tags with commas
-          </p>
+        {/* Assignee & Tags Row */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Assignee */}
+          <div className="space-y-2">
+            <Label htmlFor="assigned_to" className="text-base font-semibold flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Assignee
+            </Label>
+            <Select
+              id="assigned_to"
+              value={formData.assigned_to}
+              onChange={(e) =>
+                setFormData({ ...formData, assigned_to: e.target.value })
+              }
+              disabled={isLoading}
+            >
+              <option value="">Unassigned</option>
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.name} {member.role === 'owner' ? '(Owner)' : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label htmlFor="tags" className="text-base font-semibold flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Tags
+            </Label>
+            <Input
+              id="tags"
+              value={formData.tags}
+              onChange={(e) =>
+                setFormData({ ...formData, tags: e.target.value })
+              }
+              placeholder="bug, feature, design"
+              disabled={isLoading}
+            />
+          </div>
         </div>
+
+        {/* Attachments Section - Only show for existing cards */}
+        {card?.id && (
+          <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachments ({attachments.length})
+              </Label>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                  {uploading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-3 w-3" />
+                  )}
+                  {uploading ? 'Uploading...' : 'Add file'}
+                </span>
+              </label>
+            </div>
+
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {loadingAttachments ? (
+                <div className="text-center py-3 text-zinc-500">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                </div>
+              ) : attachments.length === 0 ? (
+                <p className="text-sm text-zinc-500 text-center py-3">
+                  No attachments yet.
+                </p>
+              ) : (
+                attachments.map((att) => (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                  >
+                    <Paperclip className="h-4 w-4 text-zinc-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                        {att.original_name}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {formatFileSize(att.size)} · {att.user_name}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <a
+                        href={`/uploads/${att.filename}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded"
+                        title="Download"
+                      >
+                        <Download className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAttachment(att.id)}
+                        className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Comments Section - Only show for existing cards */}
+        {card?.id && (
+          <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <Label className="text-base font-semibold">
+              Comments ({comments.length})
+            </Label>
+
+            {/* Comments List */}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {loadingComments ? (
+                <div className="text-center py-4 text-zinc-500">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                </div>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-zinc-500 text-center py-4">
+                  No comments yet. Be the first to comment!
+                </p>
+              ) : (
+                comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="bg-zinc-50 dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          {comment.user_name}
+                        </span>
+                        <span className="text-zinc-500">•</span>
+                        <span className="text-zinc-500 text-xs">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Comment */}
+            <div className="flex gap-2">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                rows={2}
+                disabled={addingComment}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleAddComment}
+                disabled={addingComment || !newComment.trim()}
+                size="sm"
+                className="self-end"
+              >
+                {addingComment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Post"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
@@ -221,4 +540,3 @@ export default function CardModal({ isOpen, onClose, onSubmit, card = null }) {
     </Modal>
   );
 }
-

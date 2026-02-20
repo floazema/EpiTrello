@@ -12,8 +12,11 @@ import {
   LogOut,
   LayoutDashboard,
   Users,
+  Filter,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 
 export default function BoardPage() {
@@ -29,6 +32,16 @@ export default function BoardPage() {
   const [draggedColumnId, setDraggedColumnId] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
   const [showTeamModal, setShowTeamModal] = useState(false);
+
+  // Filter state
+  const [filters, setFilters] = useState({
+    priority: "",
+    assignee: "",
+    tag: "",
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = filters.priority || filters.assignee || filters.tag;
 
   useEffect(() => {
     loadBoard();
@@ -54,6 +67,32 @@ export default function BoardPage() {
     }
   };
 
+  // Apply filters to cards
+  const getFilteredColumns = () => {
+    if (!board?.columns) return [];
+    if (!hasActiveFilters) return board.columns;
+
+    return board.columns.map((column) => ({
+      ...column,
+      cards: column.cards?.filter((card) => {
+        // Filter by priority
+        if (filters.priority && card.priority !== filters.priority) return false;
+        // Filter by assignee
+        if (filters.assignee && String(card.assigned_to) !== filters.assignee) return false;
+        // Filter by tag
+        if (filters.tag && !(card.tags || []).some(t => t.toLowerCase().includes(filters.tag.toLowerCase()))) return false;
+        return true;
+      }) || [],
+    }));
+  };
+
+  // Collect all unique tags for the filter dropdown
+  const allTags = [...new Set(
+    (board?.columns || []).flatMap(col =>
+      (col.cards || []).flatMap(card => card.tags || [])
+    )
+  )].sort();
+
   const handleAddCard = async (columnId, cardData) => {
     try {
       const res = await fetch("/api/cards", {
@@ -61,23 +100,15 @@ export default function BoardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           column_id: columnId,
-          title: cardData.title,
-          description: cardData.description,
+          ...cardData,
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        // Update board state
-        setBoard((prev) => ({
-          ...prev,
-          columns: prev.columns.map((col) =>
-            col.id === columnId
-              ? { ...col, cards: [...col.cards, data.card] }
-              : col
-          ),
-        }));
+        // Reload board to get full card data (with assigned_to_name etc.)
+        loadBoard();
       } else {
         setError(data.message);
       }
@@ -97,16 +128,8 @@ export default function BoardPage() {
       const data = await res.json();
 
       if (data.success) {
-        // Update board state
-        setBoard((prev) => ({
-          ...prev,
-          columns: prev.columns.map((col) => ({
-            ...col,
-            cards: col.cards.map((card) =>
-              card.id === cardId ? data.card : card
-            ),
-          })),
-        }));
+        // Reload board to get full card data (with assigned_to_name etc.)
+        loadBoard();
       } else {
         setError(data.message);
       }
@@ -277,7 +300,6 @@ export default function BoardPage() {
   const handleColumnDragOver = (e, index) => {
     e.preventDefault();
     e.stopPropagation();
-    // Use state to check if we're dragging a column (getData doesn't work in dragover)
     if (draggedColumnId !== null) {
       setDropTargetIndex(index);
     }
@@ -287,7 +309,6 @@ export default function BoardPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    // Use state instead of getData which can be unreliable
     if (draggedColumnId === null) return;
 
     const columnId = draggedColumnId;
@@ -325,12 +346,10 @@ export default function BoardPage() {
       const data = await res.json();
 
       if (!data.success) {
-        // Revert on error
         loadBoard();
         setError(data.message);
       }
     } catch (e) {
-      // Revert on error
       loadBoard();
       setError("Failed to move column");
     }
@@ -372,6 +391,8 @@ export default function BoardPage() {
     );
   }
 
+  const filteredColumns = getFilteredColumns();
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
       {/* Header */}
@@ -403,6 +424,19 @@ export default function BoardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Filter Toggle */}
+            <Button
+              variant={showFilters ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={hasActiveFilters ? "text-indigo-600 dark:text-indigo-400" : ""}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-1 w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+              )}
+            </Button>
             {board && (
               <Button
                 variant="ghost"
@@ -423,6 +457,81 @@ export default function BoardPage() {
             </Button>
           </div>
         </div>
+
+        {/* Filter Bar */}
+        {showFilters && (
+          <div className="px-6 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center gap-4 flex-wrap">
+            {/* Priority Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Priority</label>
+              <Select
+                value={filters.priority}
+                onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                className="h-8 text-sm w-32"
+              >
+                <option value="">All</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </Select>
+            </div>
+
+            {/* Assignee Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Assignee</label>
+              <Select
+                value={filters.assignee}
+                onChange={(e) => setFilters({ ...filters, assignee: e.target.value })}
+                className="h-8 text-sm w-40"
+              >
+                <option value="">All</option>
+                {(board?.members || []).map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Tag Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Tag</label>
+              {allTags.length > 0 ? (
+                <Select
+                  value={filters.tag}
+                  onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+                  className="h-8 text-sm w-36"
+                >
+                  <option value="">All</option>
+                  {allTags.map((tag) => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  value={filters.tag}
+                  onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+                  placeholder="Search tag..."
+                  className="h-8 text-sm w-36"
+                />
+              )}
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilters({ priority: "", assignee: "", tag: "" })}
+                className="h-8 text-xs text-red-600 dark:text-red-400 hover:text-red-700"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear filters
+              </Button>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Error Banner */}
@@ -443,7 +552,7 @@ export default function BoardPage() {
         <div className="h-full px-6 py-6">
           <div className="flex gap-4 h-full">
             {/* Columns */}
-            {board?.columns.map((column, index) => (
+            {filteredColumns.map((column, index) => (
               <div
                 key={column.id}
                 onDragOver={(e) => handleColumnDragOver(e, index)}
@@ -456,23 +565,19 @@ export default function BoardPage() {
                 {dropTargetIndex === index && draggedColumnId !== column.id && (
                   <div className="absolute -left-2 top-0 bottom-0 w-1 bg-blue-500 rounded-full z-10" />
                 )}
-                <div
-                  draggable
+                <KanbanColumn
+                  column={column}
+                  onAddCard={handleAddCard}
+                  onUpdateCard={handleUpdateCard}
+                  onDeleteCard={handleDeleteCard}
+                  onUpdateColumn={handleUpdateColumn}
+                  onDeleteColumn={handleDeleteColumn}
+                  onCardDrop={handleCardDrop}
                   onDragStart={(e) => handleColumnDragStart(e, column.id)}
                   onDragEnd={handleColumnDragEnd}
-                  className={`${draggedColumnId === column.id ? "opacity-50" : ""
-                    }`}
-                >
-                  <KanbanColumn
-                    column={column}
-                    onAddCard={handleAddCard}
-                    onUpdateCard={handleUpdateCard}
-                    onDeleteCard={handleDeleteCard}
-                    onUpdateColumn={handleUpdateColumn}
-                    onDeleteColumn={handleDeleteColumn}
-                    onCardDrop={handleCardDrop}
-                  />
-                </div>
+                  isDragging={draggedColumnId === column.id}
+                  members={board?.members || []}
+                />
               </div>
             ))}
 
@@ -541,4 +646,3 @@ export default function BoardPage() {
     </div>
   );
 }
-

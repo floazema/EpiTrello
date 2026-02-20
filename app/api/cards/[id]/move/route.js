@@ -34,35 +34,37 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Verify user owns the board containing this card and target column
+    // Verify user has access to the board containing this card
     const cardCheck = await query(
       `SELECT ca.id, ca.column_id as old_column_id FROM cards ca
        JOIN columns c ON ca.column_id = c.id
        JOIN boards b ON c.board_id = b.id
-       WHERE ca.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE ca.id = $1 AND bm.user_id = $2`,
       [id, decoded.userId]
     );
 
     if (cardCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Card non trouvée' },
+        { success: false, message: 'Card non trouvée ou accès refusé' },
         { status: 404 }
       );
     }
 
     const oldColumnId = cardCheck.rows[0].old_column_id;
 
-    // Verify target column belongs to the same board
+    // Verify target column belongs to a board user has access to
     const columnCheck = await query(
       `SELECT c.id FROM columns c
        JOIN boards b ON c.board_id = b.id
-       WHERE c.id = $1 AND b.owner_id = $2`,
+       JOIN board_members bm ON b.id = bm.board_id
+       WHERE c.id = $1 AND bm.user_id = $2`,
       [column_id, decoded.userId]
     );
 
     if (columnCheck.rows.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Column cible non trouvée' },
+        { success: false, message: 'Column cible non trouvée ou accès refusé' },
         { status: 404 }
       );
     }
