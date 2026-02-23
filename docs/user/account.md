@@ -1,5 +1,7 @@
 # Account Management
 
+![Image](./account.png)
+
 ## Creating an Account
 
 To start using EpiTrello, you need to create an account:
@@ -53,15 +55,6 @@ To log out of your account:
 1. From the dashboard, click the **Logout** button
 2. You'll be redirected to the homepage
 3. Your session will be cleared
-
-## Security Features
-
-EpiTrello implements several security measures to protect your account:
-
-- **Password Encryption**: Passwords are hashed with bcrypt before storage
-- **Secure Cookies**: Authentication tokens are stored in httpOnly cookies
-- **Token Expiration**: Sessions automatically expire after 7 days
-- **SQL Injection Protection**: All database queries use parameterized statements
 
 ## Troubleshooting
 
