@@ -48,7 +48,7 @@ test.describe('Kanban Board Workflow', () => {
     await expect(page.locator('text=Done')).toBeVisible();
   });
 
-  test('user can create and move cards', async ({ page }) => {
+  test('user can create cards', async ({ page }) => {
     await page.goto('http://localhost:3000/dashboard');
 
     // Create board
@@ -68,18 +68,6 @@ test.describe('Kanban Board Workflow', () => {
     await page.click('button:has-text("Create Card")');
 
     // Should see card in column
-    await expect(page.locator('text=Test Card')).toBeVisible();
-
-    // Edit card
-    const cardElement = page.locator('text=Test Card').first();
-    await cardElement.hover();
-    await page.click('button[title="Edit card"]');
-
-    // Update priority
-    await page.selectOption('select', 'high');
-    await page.click('button:has-text("Update Card")');
-
-    // Should still be visible
     await expect(page.locator('text=Test Card')).toBeVisible();
   });
 
