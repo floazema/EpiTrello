@@ -12,7 +12,7 @@
     "test": "vitest",
     "test:unit": "vitest run unitTest/ --silent",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage --silent"
+    "test:coverage": "vitest run --silent"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
