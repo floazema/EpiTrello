@@ -2,6 +2,13 @@
 
 EpiTrello is an online project management tool, inspired by Toyota's Kanban method. It is based on the organization of projects into boards listing cards, each representing tasks. Cards are assignable to users and are movable from one board to another, reflecting their progress.
 
+## User Doc
+
+Simplified for non-technical user
+
+[Userdoc](./docs/user/userdoc.md)
+
+
 ## 🚀 Quick Start
 
 ```bash
