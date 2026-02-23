@@ -4,3 +4,4 @@ node_modules/
 taskly/
 test-results/
 playwright-report/
+coverage/

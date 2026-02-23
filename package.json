@@ -10,9 +10,9 @@
     "init-db": "node scripts/init-db.js",
     "lint": "next lint",
     "test": "vitest",
-    "test:unit": "vitest run unitTest/",
+    "test:unit": "vitest run unitTest/ --silent",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage --silent"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
